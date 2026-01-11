@@ -37,6 +37,14 @@ transform = transforms.Compose([
     )
 ])
 
+# ================== UTILS ==================
+def resize_for_display(image, max_width=450):
+    h, w = image.shape[:2]
+    if w <= max_width:
+        return image
+    scale = max_width / w
+    return cv2.resize(image, (int(w * scale), int(h * scale)))
+
 # ================== FUNCTIONS ==================
 def extract_features(image):
     x = transform(image).unsqueeze(0).to(device)
@@ -102,7 +110,6 @@ if uploaded:
     img = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
 
     results = yolo_model(img)[0]
-
     detected = False
 
     for box in results.boxes:
@@ -135,16 +142,22 @@ if uploaded:
         overlay = cv2.addWeighted(crop, 0.6, heatmap, 0.4, 0)
         overlay = draw_anomaly_mask(overlay, amap)
 
-        st.subheader(f"{status} | {severity}")
-        st.write(f"**Score:** {score:.2f}")
-        st.write(f"**Confidence:** {confidence:.1f}%")
-        st.write(f"**Affected Area:** {coverage:.1f}%")
+        display_img = resize_for_display(overlay, max_width=450)
 
-        st.image(
-            overlay,
-            caption="Anomaly Visualization",
-            use_column_width=True
-        )
+        # ===== DASHBOARD LAYOUT =====
+        col1, col2 = st.columns([1, 2])
+
+        with col1:
+            st.subheader(f"{status} | {severity}")
+            st.write(f"**Score:** {score:.2f}")
+            st.write(f"**Confidence:** {confidence:.1f}%")
+            st.write(f"**Affected Area:** {coverage:.1f}%")
+
+        with col2:
+            st.image(
+                display_img,
+                caption="Anomaly Visualization"
+            )
 
     if not detected:
         st.warning("No bottle detected in the image.")
