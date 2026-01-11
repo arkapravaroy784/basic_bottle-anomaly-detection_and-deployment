@@ -134,4 +134,9 @@ if uploaded:
         st.write(f"**Confidence:** {confidence:.1f}%")
         st.write(f"**Affected Area:** {coverage:.1f}%")
 
-        st.image(overlay, caption="Anomaly Visualization", use_column_width=True)
+        st.image(
+    	result_image,
+    	caption="Anomaly Visualization",
+   	use_column_width=True
+	)
+
