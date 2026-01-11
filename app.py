@@ -4,9 +4,8 @@ import numpy as np
 import torch
 from ultralytics import YOLO
 from torchvision import models, transforms
-import matplotlib.pyplot as plt
 
-# ------------------ CONFIG ------------------
+# ================== CONFIG ==================
 st.set_page_config(
     page_title="Bottle Anomaly Detection",
     layout="centered"
@@ -14,7 +13,7 @@ st.set_page_config(
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-# ------------------ MODELS ------------------
+# ================== MODELS ==================
 @st.cache_resource
 def load_models():
     yolo = YOLO("yolov8n.pt")
@@ -27,7 +26,7 @@ def load_models():
 
 yolo_model, backbone = load_models()
 
-# ------------------ TRANSFORM ------------------
+# ================== TRANSFORM ==================
 transform = transforms.Compose([
     transforms.ToPILImage(),
     transforms.Resize((224, 224)),
@@ -38,7 +37,7 @@ transform = transforms.Compose([
     )
 ])
 
-# ------------------ FUNCTIONS ------------------
+# ================== FUNCTIONS ==================
 def extract_features(image):
     x = transform(image).unsqueeze(0).to(device)
     with torch.no_grad():
@@ -78,23 +77,24 @@ def draw_anomaly_mask(image, anomaly_map, alpha=0.4):
 
     return cv2.addWeighted(red, alpha, image, 1 - alpha, 0)
 
-# ------------------ LOAD NORMAL BANK ------------------
+# ================== LOAD NORMAL BANK ==================
 @st.cache_resource
 def load_normal_bank():
-    # ⚠️ Place your extracted normal_feature_bank + normal_scores here
-    # For demo: load from npy files (recommended)
     normal_features = np.load("normal_features.npy", allow_pickle=True)
     normal_scores = np.load("normal_scores.npy")
-
-    return list(normal_features), normal_scores, np.percentile(normal_scores, 95)
+    threshold = np.percentile(normal_scores, 95)
+    return list(normal_features), normal_scores, threshold
 
 normal_feature_bank, normal_scores, AUTO_THRESHOLD = load_normal_bank()
 
-# ------------------ UI ------------------
+# ================== UI ==================
 st.title("🍾 Bottle Anomaly Detection")
 st.caption("Visual anomaly detection with severity & coverage")
 
-uploaded = st.file_uploader("Upload bottle image", type=["jpg", "png", "jpeg"])
+uploaded = st.file_uploader(
+    "Upload bottle image",
+    type=["jpg", "png", "jpeg"]
+)
 
 if uploaded:
     file_bytes = np.asarray(bytearray(uploaded.read()), dtype=np.uint8)
@@ -103,10 +103,14 @@ if uploaded:
 
     results = yolo_model(img)[0]
 
+    detected = False
+
     for box in results.boxes:
         label = yolo_model.names[int(box.cls[0])]
         if label not in ["bottle", "vase"]:
             continue
+
+        detected = True
 
         x1, y1, x2, y2 = map(int, box.xyxy[0])
         crop = img[y1:y2, x1:x2]
@@ -114,15 +118,17 @@ if uploaded:
         feat = extract_features(crop)
         amap = compute_anomaly_map(feat, normal_feature_bank)
 
-        score = amap.max()
+        score = float(amap.max())
         status = "ANOMALOUS" if score > AUTO_THRESHOLD else "NORMAL"
         confidence = compute_confidence(score, normal_scores)
         severity = get_severity(score, AUTO_THRESHOLD)
         coverage = defect_coverage(amap)
 
         heatmap = cv2.applyColorMap(
-            cv2.resize((amap / amap.max() * 255).astype(np.uint8),
-                       (crop.shape[1], crop.shape[0])),
+            cv2.resize(
+                (amap / amap.max() * 255).astype(np.uint8),
+                (crop.shape[1], crop.shape[0])
+            ),
             cv2.COLORMAP_JET
         )
 
@@ -135,8 +141,10 @@ if uploaded:
         st.write(f"**Affected Area:** {coverage:.1f}%")
 
         st.image(
-    	result_image,
-    	caption="Anomaly Visualization",
-   	use_column_width=True
-	)
+            overlay,
+            caption="Anomaly Visualization",
+            use_column_width=True
+        )
 
+    if not detected:
+        st.warning("No bottle detected in the image.")
