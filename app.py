@@ -97,7 +97,7 @@ normal_feature_bank, normal_scores, AUTO_THRESHOLD = load_normal_bank()
 
 # ================== UI ==================
 st.title("🍾 Bottle Anomaly Detection")
-st.caption("Visual anomaly detection with severity & coverage")
+st.caption("Visual anomaly detection with severity & coverage - By Arka")
 
 uploaded = st.file_uploader(
     "Upload bottle image",
