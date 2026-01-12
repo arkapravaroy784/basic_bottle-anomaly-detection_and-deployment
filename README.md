@@ -30,6 +30,7 @@ interactive **Streamlit web application**.
 
 ## Demo
 🔗 **Live Demo:** https://basicbottle-anomaly-detectionand-deployment-hvnnjozy4ltweupntu.streamlit.app
+<img width="989" height="964" alt="Screenshot 2026-01-12 015631" src="https://github.com/user-attachments/assets/fb3c9201-b7e5-495e-99e1-65bb02a9b356" />
 
 ## Author
 Arkaprava Roy
